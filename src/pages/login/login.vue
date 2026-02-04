@@ -1,217 +1,166 @@
 <template>
-  <view class="container">
-    <view class="login-box" :class="{ 'fade-in': showPage }">
+  <view class="page-container">
+    <view :class="['login-content', { 'is-visible': isMounted }]">
       
-      <view class="header">
-        <image class="logo" src="/static/logo.png" mode="aspectFit" />
-        <text class="title">欢迎加入一起练</text>
-        <text class="subtitle">输入手机号，开启你的健身之旅</text>
+      <view class="brand-header">
+        <image class="logo-img" src="/static/logo.png" mode="aspectFit" />
+        <view class="title-main">一起练</view>
+        <view class="title-sub">做你组间歇最好的伙伴</view>
       </view>
 
-      <view class="form">
-        <view class="input-item">
+      <view class="login-form">
+        <view class="input-row">
           <input 
+            v-model="loginForm.phone" 
             type="number" 
-            v-model="phone" 
             placeholder="请输入手机号" 
             maxlength="11"
-            placeholder-class="placeholder"
           />
         </view>
 
-        <view class="input-item code-row">
+        <view class="input-row split">
           <input 
+            v-model="loginForm.code" 
             type="number" 
-            v-model="code" 
             placeholder="验证码" 
             maxlength="6"
-            placeholder-class="placeholder"
           />
-          <view 
-            class="get-code" 
-            :class="{ 'disabled': countdown > 0 }" 
-            @click="sendCode"
+          <text 
+            :class="['code-btn', { 'disabled': timer > 0 }]" 
+            @click="handleSendCode"
           >
-            {{ countdown > 0 ? `${countdown}s` : '获取验证码' }}
-          </view>
+            {{ timer > 0 ? `${timer}s` : '获取验证码' }}
+          </text>
         </view>
 
-        <button class="login-btn" @click="handleLogin">进入应用</button>
+        <button class="submit-btn" @click="doSubmit">登录</button>
       </view>
 
-      <view class="footer">
-        <text>未注册手机号验证后将自动创建账号</text>
-      </view>
+      <view class="page-footer">登录即代表同意用户协议</view>
     </view>
   </view>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, reactive, onMounted } from 'vue';
 
-// 页面显示状态
-const showPage = ref(false);
-// 响应式数据绑定 (类似 Java 对象的属性)
-const phone = ref('');
-const code = ref('');
-const countdown = ref(0);
-
-// 生命周期钩子：挂载后执行
-onMounted(() => {
-  // 必须使用 .value 来修改 ref 的值
-  setTimeout(() => {
-    showPage.value = true; 
-  }, 100);
+// --- 状态定义 ---
+const isMounted = ref(false);
+const timer = ref(0);
+const loginForm = reactive({
+  phone: '',
+  code: ''
 });
 
-// 获取验证码逻辑
-const sendCode = () => {
-  if (countdown.value > 0) return;
-  // 正则校验
-  if (!/^1[3-9]\d{9}$/.test(phone.value)) {
-    return uni.showToast({ title: '手机号格式不正确', icon: 'none' });
+// --- 生命周期 ---
+onMounted(() => {
+  // 延迟触发渐入效果
+  setTimeout(() => {
+    isMounted.value = true;
+  }, 50);
+});
+
+// --- 业务逻辑 ---
+
+// 获取验证码
+const handleSendCode = () => {
+  if (timer.value > 0) return;
+  if (!/^1[3-9]\d{9}$/.test(loginForm.phone)) {
+    uni.showToast({ title: '手机号格式错误', icon: 'none' });
+    return;
   }
   
-  countdown.value = 60;
-  const timer = setInterval(() => {
-    countdown.value--;
-    if (countdown.value <= 0) clearInterval(timer);
+  // 开启倒计时
+  timer.value = 60;
+  const interval = setInterval(() => {
+    timer.value--;
+    if (timer.value <= 0) clearInterval(interval);
   }, 1000);
   
-  uni.showToast({ title: '验证码已发送' });
+  uni.showToast({ title: '已发送' });
 };
 
-// 登录处理逻辑
-const handleLogin = () => {
-  if (!phone.value || !code.value) {
-    return uni.showToast({ title: '请填写完整信息', icon: 'none' });
+// 执行登录
+const doSubmit = () => {
+  if (!loginForm.phone || !loginForm.code) {
+    uni.showToast({ title: '请完善信息', icon: 'none' });
+    return;
   }
   
-  uni.showLoading({ title: '登录中' });
+  uni.showLoading({ title: '验证中...' });
   
-  // 模拟接口请求
+  // 模拟请求成功
   setTimeout(() => {
     uni.hideLoading();
-    uni.showToast({ title: '欢迎回来！', icon: 'success' });
-    
-    // 成功后跳转到首页
-    uni.reLaunch({
-      url: '/pages/index/index'
-    });
-  }, 1500);
+    uni.reLaunch({ url: '/pages/index/index' });
+  }, 1000);
 };
 </script>
 
 <style lang="scss" scoped>
-// 主题颜色变量
-$theme-color: #00bfa5;
-
-.container {
+/* 样式保持扁平化，方便后续修改 */
+.page-container {
   min-height: 100vh;
+  background-color: #ffffff;
+  padding: 0 80rpx;
   display: flex;
-  justify-content: center;
   align-items: center;
-  background-color: #ffffff; 
-  padding: 0 60rpx;
-  /* 确保整个页面在加载前不会闪烁 */
-  overflow: hidden; 
 }
 
-.login-box {
+.login-content {
   width: 100%;
-  /* 初始状态：透明且向下偏移 20rpx */
   opacity: 0;
-  transform: translateY(20rpx);
-  /* 渐入过渡效果 */
-  transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+  transform: translateY(30rpx);
+  transition: all 0.6s ease;
 
-  /* 激活状态 */
-  &.fade-in {
+  &.is-visible {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
-.header {
-  margin-bottom: 80rpx;
-  text-align: left;
-
-  .logo {
-    width: 120rpx;
-    height: 120rpx;
-    margin-bottom: 40rpx;
-    /* 给 Logo 加点平滑感 */
-    border-radius: 20rpx;
-  }
-  .title {
-    display: block;
-    font-size: 52rpx;
-    font-weight: bold;
-    color: #333;
-  }
-  .subtitle {
-    display: block;
-    font-size: 28rpx;
-    color: #999;
-    margin-top: 16rpx;
-  }
+.brand-header {
+  margin-bottom: 100rpx;
+  .logo-img { width: 120rpx; height: 120rpx; border-radius: 24rpx; }
+  .title-main { font-size: 56rpx; font-weight: bold; margin-top: 30rpx; color: #333; }
+  .title-sub { font-size: 28rpx; color: #999; margin-top: 10rpx; }
 }
 
-.form {
-  .input-item {
-    border-bottom: 1px solid #eeeeee;
-    padding: 30rpx 0;
-    margin-bottom: 30rpx;
-    display: flex;
-    align-items: center;
+.input-row {
+  border-bottom: 1px solid #f0f0f0;
+  padding: 30rpx 0;
+  margin-bottom: 20rpx;
+  display: flex;
+  align-items: center;
 
-    input {
-      flex: 1;
-      font-size: 34rpx;
-      color: #333;
-    }
-  }
+  input { flex: 1; font-size: 32rpx; }
 
-  .code-row {
-    .get-code {
+  &.split {
+    justify-content: space-between;
+    .code-btn {
+      color: #00bfa5;
       font-size: 28rpx;
-      color: $theme-color;
       font-weight: 500;
-      padding-left: 20rpx;
-      
-      &.disabled {
-        color: #ccc;
-      }
-    }
-  }
-
-  .login-btn {
-    margin-top: 80rpx;
-    height: 100rpx;
-    line-height: 100rpx;
-    background-color: $theme-color;
-    color: #fff;
-    border-radius: 50rpx;
-    font-size: 32rpx;
-    font-weight: bold;
-    /* 去除原生按钮边框 */
-    &::after { border: none; }
-    /* 点击效果 */
-    &:active {
-      opacity: 0.8;
+      &.disabled { color: #ccc; }
     }
   }
 }
 
-.footer {
+.submit-btn {
   margin-top: 80rpx;
+  background-color: #00bfa5;
+  color: #fff;
+  border-radius: 12rpx;
+  font-size: 32rpx;
+  height: 90rpx;
+  line-height: 90rpx;
+  &::after { border: none; }
+}
+
+.page-footer {
+  margin-top: 60rpx;
   text-align: center;
   font-size: 24rpx;
-  color: #bbb;
-}
-
-.placeholder {
   color: #ccc;
-  font-size: 30rpx;
 }
 </style>
